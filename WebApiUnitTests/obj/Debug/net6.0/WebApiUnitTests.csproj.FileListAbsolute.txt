@@ -1,0 +1,6 @@
+C:\projects\RevergeAssignment\WebApiUnitTests\bin\Debug\net6.0\CoverletSourceRootsMapping
+C:\projects\RevergeAssignment\WebApiUnitTests\obj\Debug\net6.0\WebApiUnitTests.csproj.AssemblyReference.cache
+C:\projects\RevergeAssignment\WebApiUnitTests\obj\Debug\net6.0\WebApiUnitTests.GeneratedMSBuildEditorConfig.editorconfig
+C:\projects\RevergeAssignment\WebApiUnitTests\obj\Debug\net6.0\WebApiUnitTests.AssemblyInfoInputs.cache
+C:\projects\RevergeAssignment\WebApiUnitTests\obj\Debug\net6.0\WebApiUnitTests.AssemblyInfo.cs
+C:\projects\RevergeAssignment\WebApiUnitTests\obj\Debug\net6.0\WebApiUnitTests.csproj.CoreCompileInputs.cache
