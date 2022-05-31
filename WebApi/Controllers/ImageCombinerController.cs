@@ -20,11 +20,11 @@ namespace WebApi.Controllers
         }
 
         [HttpGet]
-        [Route("/fitImages/fileString")]
+        [Route("/fitImages/fileString/")]
         public async Task<IActionResult> FitImages(string fileString)
         {
-
-            var results = await _iamgeCombinerService.FitImagesInMaster(fileString);
+            var list = await _fileReaderService.ReadFile(fileString);
+            var results = await _iamgeCombinerService.FitImagesInMaster(list);
 
             if (results)
                 return Ok();

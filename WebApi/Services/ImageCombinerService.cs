@@ -18,11 +18,8 @@ namespace WebApi.Services
          * Purpose: Main class for feature. Check if all other images fit in the 
          * master image.
          * */
-        public async Task<bool> FitImagesInMaster(string fileString)
+        public async Task<bool> FitImagesInMaster(List<Image> images)
         {
-            //Read file to get images
-            List<Image> images = await _fileReaderService.ReadFile(fileString);
-
             //Set up master image data
             Image masterImage = new Image(images[0].width, images[0].height, images[0].imageMatrix);
             masterImage = images[0];
@@ -32,27 +29,21 @@ namespace WebApi.Services
 
             List<int> imageAreas = new List<int>();
 
-            for(int i = 0; i < images.Count(); i++)
+            for (int i = 0; i < images.Count(); i++)
                 imageAreas.Add(GetImageArea(images[i]));
 
             //Make sure total image area is smaller than master image area
             var totalArea = await GetSumOfImageAreas(imageAreas);
-            if(totalArea > masterImageArea)
+            if (totalArea > masterImageArea)
                 return false;
 
-            List<Image> orderedList = new List<Image>();
+            List<Image> orderedList = await CreateOrderedList(images);
 
-            //Create ordered list based on largest side of master image
-            if(masterImage.width > masterImage.height)
-                orderedList = await CreateOrderedList(images, "width");
-            else
-                orderedList = await CreateOrderedList(images, "height");
-
-            List<int> coords = new List<int>() { 0, 0};
+            List<int> coords = new List<int>() { 0, 0 };
 
             List<List<int>> matrix = masterImage.imageMatrix;
 
-            for(int i = 0; i < orderedList.Count(); i++)
+            for (int i = 0; i < orderedList.Count(); i++)
             {
                 Image currImage = orderedList[i];
                 bool imageFits = await CheckIfImageFits(coords, currImage.width, currImage.height, masterImage);
@@ -67,7 +58,7 @@ namespace WebApi.Services
                     var flippedImage = await FlipImage(currImage);
                     var flippedImageFits = await CheckIfImageFits(coords, flippedImage.width, flippedImage.height, masterImage);
 
-                    if(!flippedImageFits)
+                    if (flippedImageFits)
                     {
                         await CoverImage(coords, currImage.width, currImage.height, matrix);
                         coords[0] += currImage.width;
@@ -100,9 +91,9 @@ namespace WebApi.Services
         {
             List<int> coordList = new List<int>();
 
-            for(int i = 0; i < matrix.Count(); i++)
+            for (int i = 0; i < matrix.Count(); i++)
             {
-                for(int j = 0; j < matrix.Count(); j++)
+                for (int j = 0; j < matrix.Count(); j++)
                 {
                     if (matrix[i][j] == 0)
                     {
@@ -123,9 +114,9 @@ namespace WebApi.Services
          * */
         public async Task<List<List<int>>> CoverImage(List<int> start, int width, int height, List<List<int>> matrix)
         {
-            for(int i = start[1]; i < matrix.Count(); i++)
+            for (int i = start[1]; i < matrix.Count(); i++)
             {
-                for(int j = start[0]; j < matrix.Count(); j++)
+                for (int j = start[0]; j < matrix.Count(); j++)
                 {
                     matrix[i][j] = 1;
                 }
@@ -171,8 +162,9 @@ namespace WebApi.Services
         {
             List<Image> newList = new List<Image>();
 
-            foreach (var l in list) {
-                if(l.height == height)
+            foreach (var l in list)
+            {
+                if (l.height == height)
                 {
                     newList.Add(l);
                 }
@@ -186,29 +178,13 @@ namespace WebApi.Services
          * Purpose: Create an ordered list largest-smallest from the 
          * original list of data.
          * */
-            public async Task<List<Image>> CreateOrderedList(List<Image> list, string orderBy) 
+        public async Task<List<Image>> CreateOrderedList(List<Image> list)
         {
-            for(var i = 0; i < list.Count(); i++)
+            for (var i = 0; i < list.Count(); i++)
             {
-                for(var j = 0; j < list.Count(); j++)
+                for (var j = 0; j < list.Count(); j++)
                 {
-                    switch(orderBy)
-                    {
-                        case "width":
-                            if (list[i].width > list[j].width)
-                                Swap(list, i, j);
-                            break;
-                        case "height":
-                            if (list[i].height > list[j].height)
-                                Swap(list, i, j);
-                            break;
-                        case "area":
-                            if (GetImageArea(list[i]) > GetImageArea(list[j]))
-                                Swap(list, i, j);
-                            break;
-                        default:
-                            break;
-                    }
+                    Swap(list, i, j);
                 }
             }
 
@@ -245,7 +221,7 @@ namespace WebApi.Services
         {
             var sum = 0;
 
-            for(var i = 0; i < areas.Count(); i++)
+            for (var i = 0; i < areas.Count(); i++)
                 sum += areas[i];
 
             return sum;

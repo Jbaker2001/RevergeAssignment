@@ -7,41 +7,33 @@ namespace WebApiUnitTests
 {
     public class ImageCombinerTests
     {
-        private readonly ILogger<ImageCombinerService> _iamgeCombinerLogger;
+        private readonly ILogger<ImageCombinerService> _imageCombinerLogger;
         private readonly ILogger<FileReader> _fileReaderLogger;
 
-        private readonly ILogger<ImageCombinerController> _imageCombinerLogger;
+        private readonly FileReader _fileReader;
 
         [Fact]
-        public async Task ImagesHaveSmallerPixelAreaThanMasterImage()
+        public async Task ImagesFitInMasterImage()
         {
-            var service = new ImageCombinerService(_iamgeCombinerLogger);
+            var service = new ImageCombinerService(_imageCombinerLogger, _fileReader);
+            var fileReader = new FileReader(_fileReaderLogger);
 
-            foreach(var i in imgList)
-            {
-                areaList.Add(service.GetImageArea(i));
-            }
+            List<Image> list = await fileReader.ReadFile("C:\\projects\\RevergeAssignment\\WebApiUnitTests\\ExampleTextFile.txt");
 
-            var results = await service.FitImagesInMaster(imgList);
+            var results = await service.FitImagesInMaster(list);
 
             Assert.False(results);
         }
 
+
         [Fact]
-        public async Task ImagesHaveLargerAreaThanMasterImage()
+        public async Task CreateOrderedList()
         {
-            var service = new ImageCombinerService(_iamgeCombinerLogger);
+            var service = new ImageCombinerService(_imageCombinerLogger, _fileReader);
+            var fileReader = new FileReader(_fileReaderLogger);
 
-            List<Image> imgList = new List<Image>();
-
-            foreach (var i in imgList)
-            {
-                areaList.Add(service.GetImageArea(i));
-            }
-
-            var results = await service.FitImagesInMaster(imgList);
-
-            Assert.False(results);
+            List<Image> list = await fileReader.ReadFile("C:\\projects\\RevergeAssignment\\WebApiUnitTests\\ExampleTextFile.txt");
+            await service.CreateOrderedList(list);
         }
 
         [Fact]
@@ -49,7 +41,9 @@ namespace WebApiUnitTests
         {
             var service = new FileReader(_fileReaderLogger);
 
-            var results = service.ReadFile("C:/projects/RevergeAssignment/RevergeAssignmentUnitTests/ExampleTextFile.txt");
+            var results = await service.ReadFile("C:\\projects\\RevergeAssignment\\WebApiUnitTests\\ExampleTextFile.txt");
+
+            Assert.NotNull(results);
         }
     }
 }

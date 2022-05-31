@@ -20,7 +20,7 @@ namespace WebApi.Services
         {
             List<Image> imageList = new List<Image>();
 
-            foreach (var s in File.ReadLines($@"{path}"))
+            foreach (var s in File.ReadLines(@path))
             {
                 var text = s;
                 string[] bits = text.Split(' ');
