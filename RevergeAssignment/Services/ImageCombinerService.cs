@@ -5,9 +5,12 @@ namespace RevergeAssignment.Services
     public class ImageCombinerService
     {
         private readonly ILogger<ImageCombinerService> _logger;
-        public ImageCombinerService(ILogger<ImageCombinerService> logger)
+        private readonly FileReader _fileReaderService;
+        public ImageCombinerService(ILogger<ImageCombinerService> logger,
+            FileReader fileReaderService)
         {
             _logger = logger;
+            _fileReaderService = fileReaderService;
         }
 
         /**
@@ -15,10 +18,13 @@ namespace RevergeAssignment.Services
          * Purpose: Main class for feature. Check if all other images fit in the 
          * master image.
          * */
-        public async Task<bool> FitImagesInMaster(List<Image> images)
+        public async Task<bool> FitImagesInMaster(string fileString)
         {
+            //Read file to get images
+            List<Image> images = await _fileReaderService.ReadFile(fileString);
+
             //Set up master image data
-            Image masterImage = new Image(images[0].width, images[0].height);
+            Image masterImage = new Image(images[0].width, images[0].height, images[0].imageMatrix);
             masterImage = images[0];
             var masterImageArea = GetImageArea(masterImage);
 
@@ -26,7 +32,7 @@ namespace RevergeAssignment.Services
 
             List<int> imageAreas = new List<int>();
 
-            for(var i = 0; i < images.Count(); i++)
+            for(int i = 0; i < images.Count(); i++)
                 imageAreas.Add(GetImageArea(images[i]));
 
             //Make sure total image area is smaller than master image area
@@ -42,29 +48,105 @@ namespace RevergeAssignment.Services
             else
                 orderedList = await CreateOrderedList(images, "height");
 
-            var tempMasterImage = masterImage;
-            var tempMaxWidth = masterImage.width;
-            var tempMaxHeight = masterImage.height;
+            List<int> coords = new List<int>() { 0, 0};
 
-            for(var i = 0; i < orderedList.Count(); i++)
+            List<List<int>> matrix = masterImage.imageMatrix;
+
+            for(int i = 0; i < orderedList.Count(); i++)
             {
-                var currImage = orderedList[i];
+                Image currImage = orderedList[i];
+                bool imageFits = await CheckIfImageFits(coords, currImage.width, currImage.height, masterImage);
 
-                if(currImage.height > tempMaxHeight && currImage.width > tempMasterImage.width)
-                    return false;
-
-                if (currImage.width <= tempMaxWidth)
+                if (imageFits)
                 {
-                    tempMaxWidth -= currImage.width;
-                    tempMaxHeight -= currImage.height;
+                    await CoverImage(coords, currImage.width, currImage.height, matrix);
+                    coords[0] += currImage.width;
                 }
                 else
                 {
-                    tempMasterImage.height = tempMaxHeight;
+                    var flippedImage = await FlipImage(currImage);
+                    var flippedImageFits = await CheckIfImageFits(coords, flippedImage.width, flippedImage.height, masterImage);
+
+                    if(!flippedImageFits)
+                    {
+                        await CoverImage(coords, currImage.width, currImage.height, matrix);
+                        coords[0] += currImage.width;
+                    }
+                    else
+                    {
+                        List<int> anchor = FindNextAnchor(matrix);
+
+                        if (anchor.Count() > 0)
+                        {
+                            coords[0] = anchor[0];
+                            coords[1] = anchor[1];
+                        }
+                        else
+                        {
+                            return false;
+                        }
+                    }
                 }
             }
 
             return true;
+        }
+
+        /**
+         * FindNextAnchor
+         * Purpose: Find next area that has 0 as value and return it
+         * */
+        public List<int> FindNextAnchor(List<List<int>> matrix)
+        {
+            List<int> coordList = new List<int>();
+
+            for(int i = 0; i < matrix.Count(); i++)
+            {
+                for(int j = 0; j < matrix.Count(); j++)
+                {
+                    if (matrix[i][j] == 0)
+                    {
+                        coordList.Add(j);
+                        coordList.Add(i);
+                        return coordList;
+                    }
+                }
+            }
+
+            return coordList;
+        }
+
+        /**
+         * CoverImage
+         * Purpose: Mark the areas of the master image as covered (1) for the size of 
+         * the given image.
+         * */
+        public async Task<List<List<int>>> CoverImage(List<int> start, int width, int height, List<List<int>> matrix)
+        {
+            for(int i = start[1]; i < matrix.Count(); i++)
+            {
+                for(int j = start[0]; j < matrix.Count(); j++)
+                {
+                    matrix[i][j] = 1;
+                }
+            }
+
+            return matrix;
+        }
+
+        /**
+         * CheckIfImageFits
+         * Purpose: Check necessary coordinates to see if an image will fit
+         * */
+        public async Task<bool> CheckIfImageFits(List<int> start, int width, int height, Image masterImage)
+        {
+            int startWidth = start[0];
+            int startHeight = start[1];
+
+            if ((masterImage.width - startWidth) > 0 && (masterImage.height - startHeight) > 0)
+                return true;
+
+            return false;
         }
 
         /**

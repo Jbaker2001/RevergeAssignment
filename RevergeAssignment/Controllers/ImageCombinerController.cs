@@ -20,12 +20,11 @@ namespace RevergeAssignment.Controllers
         }
 
         [HttpGet]
-        [Route("/fitImages")]
-        public async Task<IActionResult> FitImages()
+        [Route("/fitImages/fileString")]
+        public async Task<IActionResult> FitImages(string fileString)
         {
-            List<Image> imageList = _fileReaderService.ReadFile("C:/projects/RevergeAssignment/RevergeAssignmentUnitTests/ExampleTextFile.txt");
 
-            var results = await _iamgeCombinerService.FitImagesInMaster(imageList);
+            var results = await _iamgeCombinerService.FitImagesInMaster(fileString);
 
             if (results)
                 return Ok();
