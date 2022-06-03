@@ -38,47 +38,25 @@ namespace WebApi.Services
                 return false;
 
             List<Image> orderedList = await CreateOrderedList(images);
-
-            List<int> coords = new List<int>() { 0, 0 };
-
-            List<List<int>> matrix = masterImage.imageMatrix;
+            AnchorPoint anchorPoint = new AnchorPoint();
 
             for (int i = 0; i < orderedList.Count(); i++)
             {
                 Image currImage = orderedList[i];
-                bool imageFits = await CheckIfImageFits(coords, currImage.width, currImage.height, masterImage);
+                anchorPoint = FindNextAnchor(currImage, masterImage);
 
-                if (imageFits)
+                if(anchorPoint.height != -1)
                 {
-                    await CoverImage(coords, currImage.width, currImage.height, matrix);
-                    coords[0] += currImage.width;
+                    masterImage.imageMatrix = CoverImage(anchorPoint, currImage.width, currImage.height, masterImage, i + 1);
+                    Console.WriteLine("\n");
                 }
                 else
                 {
-                    var flippedImage = await FlipImage(currImage);
-                    var flippedImageFits = await CheckIfImageFits(coords, flippedImage.width, flippedImage.height, masterImage);
-
-                    if (flippedImageFits)
-                    {
-                        await CoverImage(coords, currImage.width, currImage.height, matrix);
-                        coords[0] += currImage.width;
-                    }
-                    else
-                    {
-                        List<int> anchor = FindNextAnchor(matrix);
-
-                        if (anchor.Count() > 0)
-                        {
-                            coords[0] = anchor[0];
-                            coords[1] = anchor[1];
-                        }
-                        else
-                        {
-                            return false;
-                        }
-                    }
+                    return false;
                 }
             }
+
+            PrintMasterImage(masterImage);
 
             return true;
         }
@@ -87,24 +65,56 @@ namespace WebApi.Services
          * FindNextAnchor
          * Purpose: Find next area that has 0 as value and return it
          * */
-        public List<int> FindNextAnchor(List<List<int>> matrix)
+        public AnchorPoint FindNextAnchor(Image subImage, Image masterImage)
         {
-            List<int> coordList = new List<int>();
+            AnchorPoint anchor = new AnchorPoint();
 
-            for (int i = 0; i < matrix.Count(); i++)
+            for (var i = 0; i < masterImage.height; i++)
             {
-                for (int j = 0; j < matrix.Count(); j++)
+                for (var j = 0; j < masterImage.width; j++)
                 {
-                    if (matrix[i][j] == 0)
+                    if (masterImage.imageMatrix[i][j] == 0 && (masterImage.width - j) >= subImage.width && (masterImage.height - i) >= subImage.height)
                     {
-                        coordList.Add(j);
-                        coordList.Add(i);
-                        return coordList;
+                        anchor.width = j;
+                        anchor.height = i;
+                        return anchor;
+                    }
+                    else
+                    {
+                        var flippedImage = FlipImage(subImage);
+                        if(masterImage.imageMatrix[i][j] == 0 && (masterImage.width - j) >= flippedImage.width && (masterImage.height - i) >= flippedImage.height)
+                        {
+                            anchor.width = j;
+                            anchor.height = i;
+                            return anchor;
+                        }
                     }
                 }
             }
 
-            return coordList;
+            anchor.height = -1;
+
+            return anchor;
+        }
+
+        /**
+         * PrintMasterImage
+         * Purpose: Print the master image in the console
+         * */
+        public void PrintMasterImage(Image img)
+        {
+            for (int i = 0; i < img.imageMatrix.Count(); i++)
+            {
+                var tempString = "";
+                for (int j = 0; j < img.imageMatrix.Count(); j++)
+                {
+                    tempString += img.imageMatrix[i][j].ToString();
+                }
+
+                Console.WriteLine(tempString);
+            }
+
+            Console.WriteLine("\n\n");
         }
 
         /**
@@ -112,65 +122,26 @@ namespace WebApi.Services
          * Purpose: Mark the areas of the master image as covered (1) for the size of 
          * the given image.
          * */
-        public async Task<List<List<int>>> CoverImage(List<int> start, int width, int height, List<List<int>> matrix)
+        public List<List<int>> CoverImage(AnchorPoint anchor, int width, int height, Image img, int value)
         {
-            for (int i = start[1]; i < matrix.Count(); i++)
-            {
-                for (int j = start[0]; j < matrix.Count(); j++)
-                {
-                    matrix[i][j] = 1;
-                }
-            }
+            for (int i = 0; i < height; i++)
+                for (int j = 0; j < width; j++)
+                    img.imageMatrix[anchor.height + i][anchor.width + j] = value;
 
-            return matrix;
-        }
-
-        /**
-         * CheckIfImageFits
-         * Purpose: Check necessary coordinates to see if an image will fit
-         * */
-        public async Task<bool> CheckIfImageFits(List<int> start, int width, int height, Image masterImage)
-        {
-            int startWidth = start[0];
-            int startHeight = start[1];
-
-            if ((masterImage.width - startWidth) > 0 && (masterImage.height - startHeight) > 0)
-                return true;
-
-            return false;
+            return img.imageMatrix;
         }
 
         /**
          * FlipImage
          * Purpose: Flip the sides of the image and return it
          * */
-        public async Task<Image> FlipImage(Image img)
+        public Image FlipImage(Image img)
         {
             var temp = img.height;
             img.height = img.width;
             img.width = temp;
 
             return img;
-        }
-
-        /**
-         * GetSameHeightImages
-         * Purpose: Get all images that are the same height of a given image and return them in 
-         * a list.
-         * */
-        public async Task<List<Image>> GetSameHeightImages(int height, List<Image> list)
-        {
-            List<Image> newList = new List<Image>();
-
-            foreach (var l in list)
-            {
-                if (l.height == height)
-                {
-                    newList.Add(l);
-                }
-            }
-
-            return newList;
         }
 
         /**
@@ -181,12 +152,9 @@ namespace WebApi.Services
         public async Task<List<Image>> CreateOrderedList(List<Image> list)
         {
             for (var i = 0; i < list.Count(); i++)
-            {
                 for (var j = 0; j < list.Count(); j++)
-                {
-                    Swap(list, i, j);
-                }
-            }
+                    if (list[i].width > list[j].width)
+                        Swap(list, i, j);
 
             return list;
         }

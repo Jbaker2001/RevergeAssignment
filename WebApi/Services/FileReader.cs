@@ -42,10 +42,10 @@ namespace WebApi.Services
         {
             List<List<int>> list = new List<List<int>>();
 
-            for(int i = 0; i < height - 2; i++)
+            for(int i = 0; i < height; i++)
             {
                 List<int> subList = new List<int>();
-                for(int s = 0; s < width - 2; s++)
+                for(int s = 0; s < width; s++)
                 {
                     subList.Add(0);
                 }
